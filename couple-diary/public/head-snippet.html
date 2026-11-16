@@ -1,0 +1,14 @@
+<!-- ===== PWA: tempel di dalam <head> (sebelum </head>) ===== -->
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#D2386A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Us In Places">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+<!-- ===== PWA: tempel sebelum </body> ===== -->
+<script>
+if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+  addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){})});
+}
+</script>
