@@ -638,9 +638,11 @@ var ds={},cs={},cn=0;
 items().forEach(function(i){
 if(i.status!=='done')return;
 var v=(i.visits||[]).slice();if(!v.length&&i.date)v.push(i.date);
-v.forEach(function(d){if(d)ds[d]=1});
+v.forEach(function(d){if(d)ds[String(d).slice(0,10)]=1});
 var w=(i.where||'').trim().toLowerCase().replace(/\s+/g,' ');
 if(w&&(i.type==='place'||((i.type==='eat'||i.type==='activity')&&typeof i.lat==='number')))cs[w]=1});
+mems().forEach(function(m){if(m.date)ds[String(m.date).slice(0,10)]=1});
+plans().forEach(function(p){if(p.status==='done'&&p.date)ds[String(p.date).slice(0,10)]=1});
 return {meet:Object.keys(ds).length,city:Object.keys(cs).length}}
 function nextPlan(){
 var t=todayS();
