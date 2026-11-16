@@ -1,6 +1,8 @@
 /* Us, In Places — service worker
-   Naikkan VERSION setiap kali kamu deploy supaya cache lama dibuang. */
-const VERSION = 'v1';
+   Naikkan VERSION setiap kali kamu deploy supaya cache lama dibuang.
+   PENTING: semua request ke /api/* (login Google, sesi, data, foto) TIDAK disentuh,
+   selalu langsung ke jaringan. */
+const VERSION = 'v2';
 const SHELL = 'uip-shell-' + VERSION;
 const LIBS  = 'uip-libs-' + VERSION;   // font + library CDN
 const TILES = 'uip-tiles-' + VERSION;  // tile peta
@@ -8,6 +10,7 @@ const IMGS  = 'uip-imgs-' + VERSION;   // poster film
 const KEEP  = [SHELL, LIBS, TILES, IMGS];
 
 const PRECACHE = ['./', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
+const STATIC = /\.(?:png|jpe?g|webp|svg|ico|woff2?|webmanifest)$/i;
 
 const LIB_HOSTS  = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'];
 const TILE_HOSTS = ['tiles.openfreemap.org', 'tile.openstreetmap.org'];
@@ -49,24 +52,30 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // Halaman utama: ambil yang terbaru, kalau offline pakai cache
-  if (req.mode === 'navigate') {
-    e.respondWith(
-      fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(SHELL).then((c) => c.put('./', copy));
-        return res;
-      }).catch(() => caches.match('./').then((r) => r || caches.match(req)))
-    );
+  if (url.origin === self.location.origin) {
+    // API, login Google, sesi, foto: jangan disentuh sama sekali
+    if (url.pathname.startsWith('/api/')) return;
+
+    if (req.mode === 'navigate') {
+      // hanya halaman utama yang ditangani; navigasi lain (mis. callback login) langsung ke jaringan
+      if (url.pathname !== '/' && url.pathname !== '/index.html') return;
+      e.respondWith(
+        fetch(req).then((res) => {
+          if (res.ok && res.type === 'basic') {
+            const copy = res.clone();
+            caches.open(SHELL).then((c) => c.put('./', copy));
+          }
+          return res;
+        }).catch(() => caches.match('./').then((r) => r || Response.error()))
+      );
+      return;
+    }
+    if (STATIC.test(url.pathname)) e.respondWith(swr(req, SHELL));
     return;
   }
 
-  if (url.origin === self.location.origin) {
-    e.respondWith(swr(req, SHELL));
-    return;
-  }
   if (LIB_HOSTS.includes(url.hostname))  { e.respondWith(swr(req, LIBS));       return; }
   if (TILE_HOSTS.includes(url.hostname)) { e.respondWith(swr(req, TILES, 300)); return; }
   if (IMG_HOSTS.includes(url.hostname))  { e.respondWith(swr(req, IMGS, 120));  return; }
-  // Selain itu (database, pencarian lokasi, API film, dll) dibiarkan lewat jaringan biasa
+  // selain itu dibiarkan lewat jaringan biasa
 });
